@@ -206,14 +206,14 @@
 
 ## 4 任务状态与交付格式
 
-2026-09-30 已执行 T00A 资料核对与 T00B 源码准备，证据见 [环境基线](ENVIRONMENT.md) 和 [Windows 接续步骤](WINDOWS_SETUP.md)。插件描述、Runtime 和 Build.cs 位于 `FactoryProductionStats/`；真实资产、编译和游戏加载尚未完成。用户确认后续自行在 Windows 验证，本轮先完成可独立准备的源码。下面状态表由整合agent更新，不由多个agent并行编辑。
+2026-09-30 已执行 T00A 资料核对、T00B 源码准备、T01 静态调查与 T02 契约草案，证据见 [环境基线](ENVIRONMENT.md)、[Windows 接续步骤](WINDOWS_SETUP.md) 和 [API证据与契约](API_EVIDENCE.md)。插件源码位于 `FactoryProductionStats/`；真实资产、UE编译和游戏加载尚未完成。用户确认后续自行在 Windows 验证，本轮先完成可独立准备的源码。下面状态表由整合agent更新，不由多个agent并行编辑。
 
 | 任务 | 当前状态 | 已有证据／阻塞 |
 | --- | --- | --- |
 | T00A | 资料验证通过 | ENVIRONMENT 已记录游戏1.2.4.0／502094、SML v3.12.0及精确SHA、UE／工具链要求和账号缺项；未构建 |
 | T00B | 源码准备完成，验收待Windows | 实际插件描述／Runtime／Build.cs、Git忽略与0BSD已准备；公开源码已推送到guopeng1994/satisfactory-production-stats，干净clone通过；真实资产／编译／打包／加载待用户在Windows完成，尚未通过T00B验收 |
-| T01 | 未开始 | 可先做静态调查；运行探针等待T00B |
-| T02 | 未开始 | 可草拟；冻结等待T01 |
+| T01 | 静态调查完成，探针源码待Windows验证 | API_EVIDENCE与113个固定来源指纹、生产覆盖矩阵、线程／网络缺口及fps.Probe一次性诊断源码已交付；未执行UE编译、真实成功数量探针或游戏对照，未通过T01完整验收 |
+| T02 | 契约草案与本机检查通过，未冻结 | ProductionStatsTypes.h定义数量／功率／能量、覆盖、查询和保存DTO；实际C++检查＋ASan／UBSan通过；未UE编译，冻结等待T01实测 |
 | T03 | 未开始 | 可在契约草案上检查纯算法，游戏集成待前置通过 |
 | T04 | 未开始 | 等待前置 |
 | T05 | 未开始 | 等待前置 |

@@ -1,6 +1,6 @@
 # 幸福工厂生产统计 Mod 产品与技术规划
 
-本文件定义后续 agent 的共同目标和实现约束。交付物是可安装、可在游戏中验证的 Mod：按 P 打开统计窗口，展示真实生产、消耗及电力历史。当前只完成规划，不把推测中的游戏 API 当作已验证能力。
+本文件定义后续 agent 的共同目标和实现约束。交付物是可安装、可在游戏中验证的 Mod：按 P 打开统计窗口，展示真实生产、消耗及电力历史。当前已进入源码准备与静态调查，实际状态见 TASKS.md；不把推测中的游戏 API 当作已验证能力。
 
 ## 1 已知条件与规划默认值
 
@@ -17,7 +17,7 @@
 
 ### 工程检查结果
 
-工程目前只有四张图片，没有源码、`.uproject`、`.uplugin` 或构建配置。本轮 codegraph 因只读数据库错误在重试后仍不可用；后续实现任务重新检查其可用性，失败时使用 rtk，不自行重建索引。
+最初工程只有四张图片；T00 已建立 `FactoryProductionStats/` 插件源码与公开仓库，T01/T02 已追加静态证据和契约草案。尚无本机配套 `.uproject` 或 UE 编译证据。本会话 codegraph 因只读数据库错误不可用，已回退 rtk；不自行重建索引。
 
 ### 尚待确定的项目
 
@@ -27,8 +27,8 @@
 | SML、Starter Project、定制 UE、编译工具链 | 最新稳定 SML，并锁定兼容工具链，不混用预发布版 | T00 |
 | 构建及实机验证机器 | 当前 macOS；用户确认暂无 Windows 验证机器，构建／实测尚有环境门槛 | T00 环境子阶段 |
 | 单人或联机首发 | 已确定先单人；T10 为后续联机阶段 | 已确认 |
-| 对外名称、Mod ID | 暂用 ProductionStats；创建插件前确认未冲突并固定 ID | T00 |
-| GitHub 仓库与许可证 | 公开仓库；账号／组织、仓库名、许可证尚待指定，不擅自假定 | T00A记录，公开建库／发行前落实 |
+| 对外名称、Mod ID | Factory Production Stats／FactoryProductionStats；T00 名称检查记录见 ENVIRONMENT | 已固定 |
+| GitHub 仓库与许可证 | guopeng1994/satisfactory-production-stats；0BSD，公开源码已推送 | 已落实；发行另经T11 |
 
 本轮查到 SML 官方最新发布为 [v3.12.0](https://github.com/satisfactorymodding/SatisfactoryModLoader/releases/tag/v3.12.0)，发行说明声明支持 Satisfactory 1.2，随附头文件基线为 CL491125。游戏检索到的补丁候选为 [v1.2.4.0，Build 502094](https://www.reddit.com/r/SatisfactoryGame/comments/1vljyjv/patch_notes_v1240_build_502094/)。这两个 build 不相同，不能仅凭版本名称断言插件可用；T00 需再次核对当时最新发行及兼容性，T01 实测。优先信任正式发行记录，不把迁移文档残留的“尚未发布”提示视为当前发行状态。
 

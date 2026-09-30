@@ -74,3 +74,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 本仓库自有代码采用 [0BSD](../LICENSE)，允许免费复制、修改、分发和商业使用，不要求署名／相同许可证。配套 SML、游戏、UE、Wwise 和其他第三方资源按各自许可获取，不受本仓库 LICENSE 重新授权。原始设计参考图继续只保留本地，不推送。
 
 官方步骤：[工程配置](https://docs.ficsit.app/satisfactory-modding/latest/Development/BeginnersGuide/project_setup.html)、[Alpakit 与 Root Module](https://docs.ficsit.app/satisfactory-modding/latest/Development/BeginnersGuide/SimpleMod/gameworldmodule.html)、[3.12 Game Feature 要求](https://docs.ficsit.app/satisfactory-modding/latest/Development/UpdatingFromSml311.html)。
+
+## 5 T01／T02 接续
+
+本轮新增 `fps.Probe` 原生诊断命令（含 Shipping Runtime）。在 T00B 通过后进入备份单人测试存档，打开开发者控制台并运行命令；按 [SML Commands](https://docs.ficsit.app/satisfactory-modding/latest/SMLChatCommands.html) 的当前说明确认控制台开启方式。不要把聊天里的 `/` 命令当成 Unreal 控制台命令。
+
+下一次安全工厂 tick 应输出 `LogFactoryStatsProbe` 的建筑类计数、Circuit／Group ID 和原始电力字段。它只发现 Factory 附属电路，不给世界总量或成功产量；Editor 生成桩读数也不能作为游戏验收。该命令的 UE 编译与运行尚未通过。
+
+完整的受控场景、证据缺口、父子覆盖、精度及契约冻结条件见 [API_EVIDENCE.md](API_EVIDENCE.md)。T02 纯 C++ 检查的 Mac／MSVC 命令也在该文件；Mac 检查通过只证明公共契约边界，不证明 Unreal API／采集功能。

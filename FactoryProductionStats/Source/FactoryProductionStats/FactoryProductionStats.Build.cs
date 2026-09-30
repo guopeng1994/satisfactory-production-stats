@@ -7,6 +7,6 @@ public class FactoryProductionStats : ModuleRules
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
         CppStandard = CppStandardVersion.Cpp20;
-        PrivateDependencyModuleNames.Add("Core");
+        PrivateDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "FactoryGame" });
     }
 }
