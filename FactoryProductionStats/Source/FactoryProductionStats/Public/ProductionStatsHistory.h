@@ -3,6 +3,7 @@
 #include "ProductionStatsTypes.h"
 #include <array>
 #include <map>
+#include <span>
 
 namespace FactoryProductionStats
 {
@@ -25,10 +26,16 @@ public:
     QueryResult QueryHistory(const Query& query) const;
     SaveData Export() const;
     Error Restore(const SaveData& data, WriteContext context);
+    // Bounded, versioned bytes for the game's SaveGame property. No full DTO copy.
+    Error EncodeSave(std::vector<std::uint8_t>& bytes) const;
+    Error DecodeSave(std::span<const std::uint8_t> bytes, WriteContext context);
+    static constexpr std::size_t SaveByteLimit = 128 * 1024 * 1024;
     double Clock() const { return clock; }
+    double RecordingStart() const { return start; }
     std::uint64_t Epoch() const { return epoch; }
     std::size_t AllocatedBytes() const;
     std::size_t SeriesCount() const { return series.size(); }
+    std::vector<SeriesId> SeriesIds(Category category) const;
 
 private:
     // Compact cells keep the 500-series baseline below the 128 MiB budget.
@@ -64,5 +71,6 @@ private:
     SavedHistory ExportHistory(const Series& entry, const SeriesId& id) const;
     Error ImportHistory(Series& entry, const SeriesId& id, const SavedHistory& saved,
         double savedStart, double savedClock) const;
+    Error ImportSeries(const SavedSeries& input);
 };
 }

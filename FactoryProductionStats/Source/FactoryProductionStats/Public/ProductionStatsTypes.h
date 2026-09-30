@@ -48,7 +48,7 @@ struct SeriesId
 
 inline bool IsClassPath(const std::string& key)
 {
-    return key.starts_with('/') && key.find('.') != std::string::npos;
+    return key.starts_with('/') && key.find('.') != std::string::npos && key.find('\0') == std::string::npos;
 }
 
 inline Error Validate(const SeriesId& id)
@@ -325,8 +325,8 @@ struct QueryResult
     std::vector<SeriesResult> series;
 };
 
-// Storage DTO only: T08 must implement the real game save chain. No SaveGame
-// claim is implied. Draft 0 is not a released serialization format.
+// Core DTO for checks and validated import. T08 encodes the same semantics in
+// versioned bytes for the game save property. Draft 0 is not a released format.
 inline constexpr std::uint32_t DraftSchemaVersion = 0;
 struct HistoryLevel { double resolutionSeconds = 0; std::vector<Bucket> buckets; };
 struct SavedHistory

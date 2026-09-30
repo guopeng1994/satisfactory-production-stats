@@ -85,7 +85,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 
 ## 6 T03～T05 Windows 验证接续
 
-运行时应出现一次 `T03-T05 source integration active` 日志；退出再进入产生新的世界历史。Editor 下 native hooks 按 SML 机制停用，子系统也不采集，不能用 Editor 桩返回值证明游戏统计。当前没有 P 窗口；在游戏控制台执行 `fps.Stats` 可将 All 数量及当前 power 快照写入日志，含单位、时点和 provisional 覆盖。同一 History 不依赖 UI；也可用 C++ 调试器读取 Query／CurrentPower／RecordingTime。完整待验表见 [IMPLEMENTATION.md](IMPLEMENTATION.md)。
+运行时应出现一次 `T03-T05 source integration active` 日志；退出再进入产生新的世界历史。Editor 下 native hooks 按 SML 机制停用，子系统也不采集，不能用 Editor 桩返回值证明游戏统计。T06新增P窗口源码及输入资产生成脚本，仍待生成真实输入资产和UE构建；在游戏控制台执行 `fps.Stats` 可将 All 数量及当前 power 快照写入日志，含单位、时点和 provisional 覆盖。同一 History 不依赖 UI；也可用 C++ 调试器读取 Query／CurrentPower／RecordingTime。完整待验表见 [IMPLEMENTATION.md](IMPLEMENTATION.md)。
 
 在 VS 的 x64 Native Tools Command Prompt 中，从仓库根目录执行独立数学检查（不替代 UHT／游戏检查）：
 
@@ -99,4 +99,37 @@ cl /nologo /std:c++20 /EHsc /W4 /I %FPS_SRC%\Public %FPS_SRC%\Private\Production
 %TEMP%\fps-collectors.exe
 ```
 
-逐条检查退出码；不定义 NDEBUG。MSVC 命令当前未运行。实际游戏保存／读档历史恢复在 T08 接入前不会生效，不能因 DTO 往返通过就宣称随档保存完成。
+逐条检查退出码；不定义 NDEBUG。MSVC 命令当前未运行。T08现已新增游戏保存回调及字节格式源码，尚未运行验证；DTO往返或源码存在不能证明随档保存生效。
+
+## 7 T06～T08 接续：真实输入资产与检查
+
+2026-09-30 本轮已交付输入／窗口、三页和游戏保存接线源码；按用户要求未执行任何编译、Editor脚本、打包或实机检查。详见 [UI与保存交付记录](UI_SAVE_IMPLEMENTATION.md)。Build.cs新增UMG公共依赖和Slate／SlateCore／InputCore／EnhancedInput私有依赖；须用新源码重新构建，不能沿用旧DLL验证界面。
+
+Editor可加载更新插件后，启用 **Python Editor Script Plugin**，在Editor的Python控制台运行以下命令（按真实clone路径替换）：
+
+```python
+exec(compile(open(r'C:\Mods\FactoryProductionStatsRepo\tools\create_input_assets.py', encoding='utf-8').read(), 'create_input_assets.py', 'exec'))
+```
+
+脚本生成三份真实Input资产并保存到`/FactoryProductionStats/Inputs`，同时将此目录加入Starter的`Config/DefaultGame.ini` cook目录。保留已有资产的编辑设置；版本字段／类型／父上下文不匹配时报错，不强行覆盖。重启Editor核实AssetManager发现两个FGChildInputMappingContext、按键设置出现“打开／关闭生产统计”，默认P且重绑定生效。确保cook列表及实际包包含三份资产；不要只交付生成脚本。完成后将真实`.uasset`提交到本仓库的`FactoryProductionStats/Content/Inputs`，参考图不进入包。界面使用原生UFGInteractWidget＋Slate，不需要手工创建占位Widget Blueprint。
+
+在x64 Native Tools Command Prompt运行新增检查（不定义NDEBUG）：
+
+```bat
+set FPS_SRC=FactoryProductionStats\Source\FactoryProductionStats
+cl /nologo /std:c++20 /EHsc /W4 /I %FPS_SRC%\Public %FPS_SRC%\Private\ProductionStatsHistory.cpp %FPS_SRC%\Private\ProductionStatsPersistence.cpp checks\ProductionStatsPersistenceViewCheck.cpp /Fe:%TEMP%\fps-persistence-view.exe /Fo:%TEMP%\
+%TEMP%\fps-persistence-view.exe
+```
+
+命令尚未运行。先重跑第6节原有三个检查，再跑新增检查，记录退出码及500序列编码字节数。MSVC portable检查通过仍不等于UHT／游戏通过。
+
+游戏使用备份存档，至少验证：
+
+1. P／长按／改键、搜索中输入P、Esc先离开搜索、关闭按钮、聊天／控制台／暂停、死亡／换Pawn、进出世界；原生Push／Pop后焦点、鼠标、移动和look都正确，没有重复窗口或遗留刷新。
+2. 时间栏始终在标签上方；九窗口及三页可操作；1920×1080、1280×720、2560×1440、超宽及UI缩放；当前功率与所选时间均值分开，0容量／未知／短历史／负差额／未知图标不误显示。
+3. 与`fps.Stats`同一时点核对显示值、单位、整数累计、曲线选择、搜索和恢复显示。缺口断线，部分来源小计标记；图表默认8条、最多32条，每次查询300点，列表未因图表上限丢条目。
+4. 保存回调处工厂workers已完成；保存前最后一批事实与pending数量正确，保存本身不重复推进时间。确认SaveGame struct的原生Serialize被实际调用，SML复用已加载的同名子系统，PostLoad和BeginPlay不会清空恢复结果。
+5. 关窗生产、保存／重启、加载更旧备份、从无Mod存档初次启动、未知物品Mod被移除、损坏／未来格式；恢复失败后不继续采集，不覆盖原始载荷；编码失败确实使写出失败。禁用／卸载后另存导致历史是否丢失需实测。
+6. 500序列测实际存档增量、编码耗时和完整保存／恢复峰值；当前源码不保证整体峰值128MiB，不能只报告History或payload单项。
+
+T00B／T01／T02及T06～T08仍按实测结果验收；本轮仅完成源码。没有执行GitHub Release、SMR上传或T09单人发布验收。

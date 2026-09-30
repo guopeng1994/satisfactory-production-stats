@@ -16,3 +16,7 @@ source_dir=FactoryProductionStats/Source/FactoryProductionStats
     -I "$source_dir/Public" "$source_dir/Private/ProductionStatsHistory.cpp" "$source_dir/Private/ProductionStatsCollectors.cpp" \
     checks/ProductionStatsCollectorsCheck.cpp -o "$check_dir/collectors"
 "$check_dir/collectors"
+"$check_cxx" -std=c++20 -Wall -Wextra -Werror -pedantic -fno-exceptions -fno-rtti -fsanitize=address,undefined \
+    -I "$source_dir/Public" "$source_dir/Private/ProductionStatsHistory.cpp" "$source_dir/Private/ProductionStatsPersistence.cpp" \
+    checks/ProductionStatsPersistenceViewCheck.cpp -o "$check_dir/persistence-view"
+"$check_dir/persistence-view"

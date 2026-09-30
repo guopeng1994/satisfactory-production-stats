@@ -6,7 +6,8 @@ public class FactoryProductionStats : ModuleRules
     public FactoryProductionStats(ReadOnlyTargetRules Target) : base(Target)
     {
         PCHUsage = PCHUsageMode.UseExplicitOrSharedPCHs;
+        PrivateDependencyModuleNames.AddRange(new[] { "Slate", "SlateCore", "InputCore", "EnhancedInput" });
         CppStandard = CppStandardVersion.Cpp20;
-        PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "FactoryGame", "SML" });
+        PublicDependencyModuleNames.AddRange(new[] { "Core", "CoreUObject", "Engine", "FactoryGame", "SML", "UMG" });
     }
 }

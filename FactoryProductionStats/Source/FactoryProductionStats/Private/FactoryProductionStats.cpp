@@ -6,6 +6,9 @@
 #include "Diagnostics/FactoryStatsProbe.h"
 #include "ProductionStatsSubsystem.h"
 #include "ProductionStatsHooks.h"
+#include "ProductionStatsPlayerComponent.h"
+#include "FGCharacterPlayer.h"
+#include "FGPlayerController.h"
 #include "Subsystem/SubsystemActorManager.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFactoryProductionStats, Log, All);
@@ -17,10 +20,24 @@ public:
     {
         UE_LOG(LogFactoryProductionStats, Log, TEXT("FactoryProductionStats 0.1.0 runtime module started"));
         FProductionStatsHooks::Install();
+        InputHandle = AFGCharacterPlayer::OnPlayerInputInitialized.AddLambda([this](AFGCharacterPlayer* Character, UInputComponent* Input)
+        {
+            if (!IsValid(Character)) return;
+            if (auto* Component = UProductionStatsPlayerComponent::Attach(Cast<AFGPlayerController>(Character->GetController())))
+            { ActivePlayers.AddUnique(Component); Component->BindInput(Character, Input); }
+        });
         WorldHandle = FWorldDelegates::OnWorldInitializedActors.AddLambda([this](const UWorld::FActorsInitializedParams& Params)
         {
             auto* World = Params.World;
-            if (!IsValid(World) || !World->IsGameWorld() || World->GetNetMode() == NM_Client) return;
+            if (!IsValid(World) || !World->IsGameWorld()) return;
+            for (auto It = World->GetPlayerControllerIterator(); It; ++It)
+                if (auto* Player = Cast<AFGPlayerController>(It->Get()))
+                    if (auto* Component = UProductionStatsPlayerComponent::Attach(Player))
+                    {
+                        ActivePlayers.AddUnique(Component);
+                        if (auto* Character = Cast<AFGCharacterPlayer>(Player->GetPawn())) Component->BindInput(Character, Character->InputComponent);
+                    }
+            if (World->GetNetMode() == NM_Client) return;
             if (auto* Manager = World->GetSubsystem<USubsystemActorManager>())
             {
                 Manager->RegisterSubsystemActor(AProductionStatsSubsystem::StaticClass());
@@ -48,6 +65,9 @@ public:
 
     void ShutdownModule() override
     {
+        AFGCharacterPlayer::OnPlayerInputInitialized.Remove(InputHandle);
+        for (const auto& Component : ActivePlayers) if (Component.IsValid()) Component->DestroyComponent();
+        ActivePlayers.Reset();
         if (StatsCommand) { IConsoleManager::Get().UnregisterConsoleObject(StatsCommand, false); StatsCommand = nullptr; }
         FWorldDelegates::OnWorldInitializedActors.Remove(WorldHandle);
         for (const auto& Stats : ActiveSubsystems) if (Stats.IsValid()) Stats->Destroy();
@@ -106,7 +126,8 @@ private:
     }
     IConsoleCommand* ProbeCommand = nullptr;
     IConsoleCommand* StatsCommand = nullptr;
-    FDelegateHandle WorldHandle;
+    FDelegateHandle WorldHandle, InputHandle;
+    TArray<TWeakObjectPtr<UProductionStatsPlayerComponent>> ActivePlayers;
     TArray<TWeakObjectPtr<AProductionStatsSubsystem>> ActiveSubsystems;
     TArray<TWeakObjectPtr<AFactoryStatsProbe>> ActiveProbes;
 };

@@ -491,12 +491,51 @@ Error History::ImportHistory(Series& entry, const SeriesId& id, const SavedHisto
     return Error::None;
 }
 
+std::vector<SeriesId> History::SeriesIds(Category category) const
+{
+    std::vector<SeriesId> result;
+    for (const auto& [id, entry] : series) if (id.category == category) result.push_back(id);
+    return result;
+}
+
+Error History::ImportSeries(const SavedSeries& input)
+{
+    if (Validate(input.series) != Error::None || input.series.key.size() > 4096 || series.contains(input.series)) return Error::InvalidSeries;
+    const auto perSeries = (std::accumulate(Capacities.begin(), Capacities.end(), std::size_t{0}) + AllTrendLimit + 1) * sizeof(Cell) + sizeof(Series) + sizeof(SeriesId) + input.series.key.size() + 256;
+    if (AllocatedBytes() + perSeries > MemoryLimit) return Error::CapacityExceeded;
+    if (!IsTime(input.latestPowerTime) || input.latestPowerTime > clock) return Error::InvalidTime;
+    auto entry = NewSeries(input.series);
+    if (auto error = ImportHistory(entry, input.series, input.history, start, clock); error != Error::None) return error;
+    if (input.series.category != Category::Power)
+    {
+        if (auto error = ValidateQuantity(input.series, input.pending); error != Error::None) return error;
+        if (input.latestPower) return Error::InvalidValue;
+        if (input.series.category == Category::Items)
+        {
+            auto total = entry.lifetime.items;
+            if (CheckedAddItems(total, std::get<std::int64_t>(input.pending)) != Error::None) return Error::Overflow;
+        }
+        else if (!std::isfinite(entry.lifetime.value + QuantityDouble(input.pending))) return Error::Overflow;
+    }
+    else
+    {
+        if (QuantityDouble(input.pending) != 0 || Validate(PowerReading{input.series, input.latestPower, std::nullopt, input.completeSources}) != Error::None ||
+            !IsTime(input.latestPowerTime) || input.latestPowerTime > clock ||
+            (input.latestPower && std::abs(*input.latestPower) > std::numeric_limits<double>::max() / MaxClock / 4)) return Error::InvalidValue;
+        if (input.latestPower && (input.latestPowerTime < start ||
+            (IsEnergy(input.series) && entry.lifetime.covered > 0 && input.latestPowerTime < entry.lifetime.stateTime))) return Error::InvalidTime;
+    }
+    entry.pending = input.pending; entry.latest = input.latestPower; entry.latestTime = input.latestPowerTime; entry.complete = input.completeSources;
+    series.emplace(input.series, std::move(entry));
+    return Error::None;
+}
+
 Error History::Restore(const SaveData& saved, WriteContext context)
 {
     if (!CanWrite(context, epoch)) return Error::NotAuthoritative;
     if (const auto error = CheckSchema(saved.schemaVersion); error != Error::None) return error;
     if (!IsTime(saved.recordingStart) || !IsTime(saved.clock) || saved.clock < saved.recordingStart || saved.clock >= MaxClock) return Error::InvalidTime;
-    const auto perSeries = (std::accumulate(Capacities.begin(), Capacities.end(), std::size_t{0}) + AllTrendLimit + 1) * sizeof(Cell) + sizeof(Series) + 8192;
+    const auto perSeries = (std::accumulate(Capacities.begin(), Capacities.end(), std::size_t{0}) + AllTrendLimit + 1) * sizeof(Cell) + sizeof(Series);
     if (saved.quantityCoverage.size() != 2 || saved.series.size() > MemoryLimit / perSeries - 2) return Error::CapacityExceeded;
     History restored(epoch, saved.recordingStart);
     restored.clock = saved.clock;
@@ -509,32 +548,7 @@ Error History::Restore(const SaveData& saved, WriteContext context)
         state.observed = input.observed; state.complete = input.completeSources; state.reasons = input.gapReasons;
     }
     for (const auto& input : saved.series)
-    {
-        if (Validate(input.series) != Error::None || input.series.key.size() > 4096 || restored.series.contains(input.series)) return Error::InvalidSeries;
-        auto entry = restored.NewSeries(input.series);
-        if (auto error = restored.ImportHistory(entry, input.series, input.history, saved.recordingStart, saved.clock); error != Error::None) return error;
-        if (input.series.category != Category::Power)
-        {
-            if (auto error = ValidateQuantity(input.series, input.pending); error != Error::None) return error;
-            if (input.latestPower) return Error::InvalidValue;
-            if (input.series.category == Category::Items)
-            {
-                auto total = entry.lifetime.items;
-                if (CheckedAddItems(total, std::get<std::int64_t>(input.pending)) != Error::None) return Error::Overflow;
-            }
-            else if (!std::isfinite(entry.lifetime.value + QuantityDouble(input.pending))) return Error::Overflow;
-        }
-        else
-        {
-            if (QuantityDouble(input.pending) != 0 || Validate(PowerReading{input.series, input.latestPower, std::nullopt, input.completeSources}) != Error::None ||
-                !IsTime(input.latestPowerTime) || input.latestPowerTime > saved.clock ||
-                (input.latestPower && std::abs(*input.latestPower) > std::numeric_limits<double>::max() / MaxClock / 4)) return Error::InvalidValue;
-            if (input.latestPower && (input.latestPowerTime < saved.recordingStart ||
-                (IsEnergy(input.series) && entry.lifetime.covered > 0 && input.latestPowerTime < entry.lifetime.stateTime))) return Error::InvalidTime;
-        }
-        entry.pending = input.pending; entry.latest = input.latestPower; entry.latestTime = input.latestPowerTime; entry.complete = input.completeSources;
-        restored.series.emplace(input.series, std::move(entry));
-    }
+        if (auto error = restored.ImportSeries(input); error != Error::None) return error;
     if (restored.AllocatedBytes() > MemoryLimit) return Error::CapacityExceeded;
     *this = std::move(restored); // Invalid input never replaces the live history.
     return Error::None;

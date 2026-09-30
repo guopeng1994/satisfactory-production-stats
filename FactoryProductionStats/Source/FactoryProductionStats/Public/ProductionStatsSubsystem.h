@@ -5,11 +5,13 @@
 #include "FGBuildableSubsystem.h"
 #include "ProductionStatsHistory.h"
 #include "ProductionStatsCollectors.h"
+#include "FGSaveInterface.h"
+#include "ProductionStatsSave.h"
 #include <memory>
 #include "ProductionStatsSubsystem.generated.h"
 
 UCLASS(NotBlueprintable)
-class FACTORYPRODUCTIONSTATS_API AProductionStatsSubsystem : public AModSubsystem, public IFGFactoryTickHandlerInterface
+class FACTORYPRODUCTIONSTATS_API AProductionStatsSubsystem : public AModSubsystem, public IFGFactoryTickHandlerInterface, public IFGSaveInterface
 {
     GENERATED_BODY()
 public:
@@ -18,12 +20,27 @@ public:
     void PreFactoryTick(AFGBuildableSubsystem* Subsystem, float DeltaTime) override;
     FactoryProductionStats::QueryResult Query(const FactoryProductionStats::Query& Request) const;
     double RecordingTime() const { check(IsInGameThread()); return History ? History->Clock() : 0; }
+    double RecordingDuration() const { check(IsInGameThread()); return History ? History->Clock() - History->RecordingStart() : 0; }
     const FactoryProductionStats::PowerSnapshot& CurrentPower() const { check(IsInGameThread()); return Power; }
+    FactoryProductionStats::Error PersistenceStatus() const { return SaveError; }
+    void PreSaveGame_Implementation(int32 SaveVersion, int32 GameVersion) override;
+    void PostSaveGame_Implementation(int32 SaveVersion, int32 GameVersion) override;
+    void PreLoadGame_Implementation(int32 SaveVersion, int32 GameVersion) override;
+    void PostLoadGame_Implementation(int32 SaveVersion, int32 GameVersion) override;
+    void GatherDependencies_Implementation(TArray<UObject*>& Dependencies) override {}
+    bool ShouldSave_Implementation() const override { return HasAuthority(); }
+    bool NeedTransform_Implementation() override { return false; }
 protected:
     void BeginPlay() override;
     void EndPlay(const EEndPlayReason::Type Reason) override;
 private:
     void TryRegister();
+    void EnsureHistory();
+    void StopCollection();
+    bool FlushCompletedInterval();
+    UPROPERTY(SaveGame) FProductionStatsSavePayload SavedPayload;
+    FactoryProductionStats::Error SaveError = FactoryProductionStats::Error::None;
+    bool PreservePayload = false;
     void QueueActor(AActor* Actor);
     UFUNCTION() void OnBuildableAdded(AFGBuildable* Actor);
     UFUNCTION() void OnBuildableRemoved(AFGBuildable* Actor);

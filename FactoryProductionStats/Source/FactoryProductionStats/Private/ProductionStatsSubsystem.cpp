@@ -18,9 +18,59 @@ void AProductionStatsSubsystem::BeginPlay()
 {
     Super::BeginPlay();
     if (WITH_EDITOR || !HasAuthority() || !GetWorld()->IsGameWorld()) { SetActorTickEnabled(false); return; }
-    History = std::make_unique<FactoryProductionStats::History>(NextEpoch.fetch_add(1));
-    Inbox = std::make_shared<QuantityInbox>();
+    EnsureHistory();
     TryRegister();
+}
+void AProductionStatsSubsystem::EnsureHistory()
+{
+    if (WITH_EDITOR || !HasAuthority() || !GetWorld()->IsGameWorld() || History || PreservePayload) return;
+    History = std::make_unique<FactoryProductionStats::History>(NextEpoch.fetch_add(1));
+    if (!SavedPayload.Bytes.empty())
+    {
+        SaveError = History->DecodeSave(SavedPayload.Bytes, {true, History->Epoch()});
+        if (SaveError != Error::None)
+        {
+            PreservePayload = true; History.reset(); SetActorTickEnabled(false);
+            UE_LOG(LogProductionStats, Error, TEXT("Statistics save rejected (%d); original bytes retained, collection disabled"), static_cast<int32>(SaveError));
+            return;
+        }
+        std::vector<std::uint8_t>().swap(SavedPayload.Bytes);
+    }
+    for (const auto& Id : History->SeriesIds(Category::Power))
+        if (KnownPowerSeries.size() < 600) KnownPowerSeries.insert(Id);
+    Inbox = std::make_shared<QuantityInbox>();
+    PendingDelta = 0; NextPowerTime = History->Clock(); Power = {};
+}
+void AProductionStatsSubsystem::PreSaveGame_Implementation(int32, int32)
+{
+    check(IsInGameThread());
+    if (PreservePayload) return; // Never overwrite a future/corrupt schema with empty history.
+    EnsureHistory();
+    if (!History) return;
+    // Candidate game save barrier: verify that factory workers have completed
+    // before this callback in the locked game version (Windows T01/T08).
+    if (!FlushCompletedInterval()) SaveError = Error::InvalidTime;
+    else SaveError = History->EncodeSave(SavedPayload.Bytes);
+    SavedPayload.WriteFailed = SaveError != Error::None;
+    if (SavedPayload.WriteFailed) UE_LOG(LogProductionStats, Error, TEXT("Statistics snapshot failed (%d); archive write must fail"), static_cast<int32>(SaveError));
+}
+void AProductionStatsSubsystem::PostSaveGame_Implementation(int32, int32)
+{
+    if (!PreservePayload && !SavedPayload.WriteFailed) std::vector<std::uint8_t>().swap(SavedPayload.Bytes);
+}
+void AProductionStatsSubsystem::PreLoadGame_Implementation(int32, int32)
+{
+    check(IsInGameThread());
+    StopCollection();
+    Closing = false; PreservePayload = false; SaveError = Error::None;
+    SavedPayload.WriteFailed = false;
+    std::vector<std::uint8_t>().swap(SavedPayload.Bytes);
+}
+void AProductionStatsSubsystem::PostLoadGame_Implementation(int32, int32)
+{
+    check(IsInGameThread());
+    EnsureHistory();
+    if (HasActorBegunPlay()) { SetActorTickEnabled(!PreservePayload); TryRegister(); }
 }
 void AProductionStatsSubsystem::Tick(float DeltaSeconds) { Super::Tick(DeltaSeconds); TryRegister(); }
 void AProductionStatsSubsystem::TryRegister()
@@ -57,9 +107,9 @@ void AProductionStatsSubsystem::OnActorDestroyed(AActor* Actor)
     PendingActors.Remove(TWeakObjectPtr<AActor>(Actor));
     if (IsValid(Actor)) Actor->OnDestroyed.RemoveDynamic(this, &AProductionStatsSubsystem::OnActorDestroyed);
 }
-void AProductionStatsSubsystem::PreFactoryTick(AFGBuildableSubsystem* Subsystem, float DeltaTime)
+bool AProductionStatsSubsystem::FlushCompletedInterval()
 {
-    if (Closing || !IsInGameThread() || !HasAuthority() || !History || Subsystem != FactorySubsystem.Get()) return;
+    if (!History || !Inbox || Closing) return false;
     const WriteContext Writer{true, History->Epoch()};
     auto Batch = Inbox->Drain(History->Clock());
     const auto Unsupported = static_cast<std::uint32_t>(GapReason::UnsupportedSource);
@@ -75,7 +125,15 @@ void AProductionStatsSubsystem::PreFactoryTick(AFGBuildableSubsystem* Subsystem,
     }
     // Flush the previous factory interval with its own dt, before publishing this
     // interval's bindings/snapshot. Workers never advance time or mutate History.
-    if (History->AdvanceTo(History->Clock() + PendingDelta, Writer) != Error::None) { Inbox->MarkGap(); PendingDelta = 0; return; }
+    if (History->AdvanceTo(History->Clock() + PendingDelta, Writer) != Error::None) { Inbox->MarkGap(); PendingDelta = 0; return false; }
+    PendingDelta = 0;
+    return true;
+}
+void AProductionStatsSubsystem::PreFactoryTick(AFGBuildableSubsystem* Subsystem, float DeltaTime)
+{
+    if (Closing || !IsInGameThread() || !HasAuthority() || !History || Subsystem != FactorySubsystem.Get()) return;
+    const WriteContext Writer{true, History->Epoch()};
+    if (!FlushCompletedInterval()) return;
     PendingDelta = std::isfinite(DeltaTime) && DeltaTime > 0 ? DeltaTime : 0;
     if (DescriptorsDirty) { FProductionStatsHooks::RefreshDescriptors(); DescriptorsDirty = false; }
     for (int32 Index = PendingActors.Num() - 1; Index >= 0; --Index)
@@ -112,9 +170,9 @@ QueryResult AProductionStatsSubsystem::Query(const FactoryProductionStats::Query
 {
     check(IsInGameThread());
     if (History && !Closing) return History->QueryHistory(Request);
-    QueryResult Result; Result.error = Error::NoCoverage; return Result;
+    QueryResult Result; Result.error = PreservePayload ? SaveError : Error::NoCoverage; return Result;
 }
-void AProductionStatsSubsystem::EndPlay(const EEndPlayReason::Type Reason)
+void AProductionStatsSubsystem::StopCollection()
 {
     Closing = true;
     if (Inbox) Inbox->Close(); // Outstanding callback scopes now fail harmlessly.
@@ -133,5 +191,10 @@ void AProductionStatsSubsystem::EndPlay(const EEndPlayReason::Type Reason)
     FProductionStatsHooks::ReleaseDescriptorsIfIdle();
     RegisteredActors.Empty(); PendingActors.Empty(); FactorySubsystem.Reset();
     Inbox.reset(); History.reset(); KnownPowerSeries.clear(); Power = {};
+    SpawnHandle.Reset(); PendingDelta = 0; NextPowerTime = 0; DescriptorsDirty = false;
+}
+void AProductionStatsSubsystem::EndPlay(const EEndPlayReason::Type Reason)
+{
+    StopCollection();
     Super::EndPlay(Reason);
 }
