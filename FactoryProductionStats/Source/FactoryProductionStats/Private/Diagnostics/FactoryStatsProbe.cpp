@@ -17,18 +17,24 @@ void AFactoryStatsProbe::BeginPlay()
     auto* Subsystem = AFGBuildableSubsystem::Get(GetWorld());
     if (!IsInGameThread() || !HasAuthority() || !IsValid(Subsystem))
     {
+        UE_LOG(LogFactoryStatsProbe, Warning, TEXT("probe=%s registration rejected: no authoritative game-thread buildable subsystem"), *GetPathName());
         Destroy();
         return;
     }
     RegisteredSubsystem = Subsystem;
     Subsystem->AddFactoryTickHandler(this);
+    UE_LOG(LogFactoryStatsProbe, Display, TEXT("probe=%s handler registered"), *GetPathName());
     SetLifeSpan(10); // Also cleans up if no factory tick arrives.
 }
 
 void AFactoryStatsProbe::EndPlay(const EEndPlayReason::Type Reason)
 {
     if (auto* Subsystem = RegisteredSubsystem.Get())
+    {
         Subsystem->RemoveFactoryTickHandler(this);
+        UE_LOG(LogFactoryStatsProbe, Display, TEXT("probe=%s handler removal requested captured=%d endReason=%d"),
+            *GetPathName(), Captured, static_cast<int32>(Reason));
+    }
     RegisteredSubsystem.Reset();
     Super::EndPlay(Reason);
 }
@@ -57,10 +63,11 @@ void AFactoryStatsProbe::PreFactoryTick(AFGBuildableSubsystem* Subsystem, float 
     {
         FPowerCircuitStats Stats;
         Circuit->GetStats(Stats);
-        UE_LOG(LogFactoryStatsProbe, Display, TEXT("circuit=%d group=%d fuse=%d consumed=%g produced=%g capacity=%g demand=%g batteryNet=%g boost=%g (raw native values)"),
+        UE_LOG(LogFactoryStatsProbe, Display, TEXT("circuit=%d group=%d fuse=%d consumed=%g produced=%g capacity=%g demand=%g batteryNet=%g batteryStore=%g batteryStoreCapacity=%g boost=%g (raw native values)"),
             Circuit->GetCircuitID(), Circuit->GetCircuitGroupID(), Circuit->IsFuseTriggered(),
             Stats.PowerConsumed, Stats.PowerProduced, Stats.PowerProductionCapacity,
-            Stats.MaximumPowerConsumption, Stats.BatteryPowerInput, Stats.BoostProduced);
+            Stats.MaximumPowerConsumption, Stats.BatteryPowerInput,
+            Circuit->GetBatterySumPowerStore(), Circuit->GetBatterySumPowerStoreCapacity(), Stats.BoostProduced);
     }
     // Remove outside the handler iteration, never mutate its array mid-dispatch.
     SetLifeSpan(0.1f);

@@ -97,8 +97,8 @@ SML 提供 [ModSubsystem / SubsystemActorManager](https://github.com/satisfactor
 本轮最小源码：`Private/Diagnostics/FactoryStatsProbe.h/.cpp`，通过原生控制台命令 `fps.Probe` 创建临时 Actor，不需要探针 Blueprint：
 
 1. 命令在 Runtime 注册（含 Shipping，便于实际游戏验证），限定游戏线程、游戏世界、非客户端；Actor 再检查 HasAuthority。
-2. BeginPlay 注册一次工厂 handler；第一次 PreFactoryTick 输出建筑类路径计数，以及 Factory 附属的去重 Circuit 原始字段和 Group ID。没有库存差分、产量累加或生产 hook。
-3. 不在 handler 遍历中移除自己；短 lifespan 延后销毁，EndPlay 配对移除 handler。没有 tick 到来时最长 10 秒寿命。模块卸载先注销命令，再销毁存活探针；世界退出走 Actor EndPlay。
+2. BeginPlay 注册一次工厂 handler；第一次 PreFactoryTick 输出建筑类路径计数，以及 Factory 附属的去重 Circuit 原始字段、储能存量／容量和 Group ID。没有库存差分、产量累加或生产 hook。
+3. 不在 handler 遍历中移除自己；短 lifespan 延后销毁，EndPlay 配对移除 handler。没有 tick 到来时最长 10 秒寿命。模块卸载先注销命令，再销毁存活探针；世界退出走 Actor EndPlay。注册／移除请求日志包含探针对象路径，移除还记录是否已采样和退出原因；日志不能单独证明原生数组中已无残留 handler，仍需反复进出世界验证。
 4. 这是一次 O(建筑数) 诊断扫描，只在人工调用时发生，非逐帧采集。它不发现便携矿机、所有特殊消费者或全电网；日志明确标注不提供世界总量。
 
 控制台注册使用 [Unreal IConsoleManager](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/IConsoleManager/RegisterConsoleCommand?application_version=5.6) 的原生 world delegate。本机未取得定制引擎头文件、未执行 UHT／UE 编译；以上为源码行为，**不是运行验收结果**。Windows 以实际游戏中的插件构建验证，记录控制台启用方法；Editor 的生成桩读数不能替代发行游戏结果。

@@ -69,7 +69,7 @@ Editor target 的真实名称是 **FactoryEditor**，不是 FactoryGameEditor；
 
 - 本项目固定 **Mod Reference：`FactoryProductionStats`**；显示名称 **Factory Production Stats**（中文：幸福工厂生产统计），首个开发版本 `0.1.0`。SMR 本轮查重未发现同名公开条目；尚未在 SMR 注册，注册／存档使用后不随意改名。
 - 打开配套 Editor，在 Alpakit Dev 中 `Create Mod`，选 **C++ & Blueprint**，使用上述 Reference。当前 Game Feature 路径为 `<Starter>/Mods/GameFeatures/FactoryProductionStats/`。最终将模板生成的本 Mod 文件纳入自己的 Git 仓库；不要把 Starter 根目录或第三方插件一起纳入。
-- 本仓库已提供真实 `.uplugin`、Runtime 模块和 Build.cs，位于 `FactoryProductionStats/`。当前代码仅使用 Core，输出启动／退出日志；后续使用游戏／SML 类型时按配套模板补齐所需依赖，不修改游戏／SML 头文件绕过私有访问。Windows 接入与资产步骤见 [WINDOWS_SETUP](WINDOWS_SETUP.md)。
+- 本仓库已提供真实 `.uplugin`、Runtime 模块和 Build.cs，位于 `FactoryProductionStats/`。T00 初始模块仅使用 Core；T01 诊断 Actor 已增加 CoreUObject、Engine、FactoryGame 依赖，Runtime 注册 `fps.Probe`，T02 公共契约独立于 UE。未添加正式采集或 SML C++ 子系统接线，不修改游戏／SML 头文件绕过私有访问。Windows 接入与资产步骤见 [WINDOWS_SETUP](WINDOWS_SETUP.md)，诊断与契约证据见 [API_EVIDENCE](API_EVIDENCE.md)。
 - 创建并保存真正的 `FGGameFeatureData`，位于插件 Content 根目录，名字与 Reference 相同，`BuiltInInitialFeatureState=Active`。保留模板必要扫描规则。需要 SML 世界入口时创建 `GameWorldModule` 蓝图并勾选 Root Module，同一模块类型只有一个 root。
 - `.uplugin` 已将 `SemVersion`、`VersionName` 设为 `0.1.0`，必需 SML 依赖锁到 `3.12.0`，GameVersion 精确限定待测 build `502094`，作者为用户指定的 `guopeng1994`。**这些是源码配置，尚无可宣称兼容的本项目包。** 待 Alpakit 检查实际打包元数据。
 
@@ -135,7 +135,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 
 **T00A：准备完成（资料验证通过）。** 变更为本文件；锁定公开版本、兼容依据、取得路径、账号限制和真实缺项。允许 T01 静态调查和 T02 契约草案；不能据此放行真实采集、UI 或游戏集成。
 
-**T00B：源码准备完成，验收待 Windows。** 已提供实际插件描述、C++ Runtime／构建规则及 Windows 资产接入说明；已落实仓库归属、名称、许可证和访问。用户后续提供配套机器并执行编译、打包和加载检查。当前尚无完整 Starter、私有引擎安装包、真实 Game Feature／根世界资产或构建／加载证据，因此 T00B 按原验收条件仍未通过。源码只含空插件的真实模块行为，没有伪造二进制资产或生产功能。
+**T00B：源码准备完成，验收待 Windows。** 已提供实际插件描述、C++ Runtime／构建规则及 Windows 资产接入说明；已落实仓库归属、名称、许可证和访问。用户后续提供配套机器并执行编译、打包和加载检查。当前尚无完整 Starter、私有引擎安装包、真实 Game Feature／根世界资产或构建／加载证据，因此 T00B 按原验收条件仍未通过。T01 后续加入一次性诊断源码，T02 加入契约草案；没有伪造二进制资产或正式生产功能。
 
 本轮 Python 标准库静态检查通过：插件／模块名称、版本、必需 SML、目标 build、Core 构建依赖及实际启动／退出方法；12 个应忽略路径被排除，6 个源码／自有资产路径可追踪。首次 dry-run 发现本地 `.serena` 工具配置，已加入忽略规则并保留本地文件。最终公开候选为 10 个自有文件；这些检查不能替代 Unreal 编译或游戏运行。原始参考图完整保留。
 
