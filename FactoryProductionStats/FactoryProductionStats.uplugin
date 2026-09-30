@@ -1,0 +1,32 @@
+{
+  "FileVersion": 3,
+  "Version": 0,
+  "VersionName": "0.1.0",
+  "SemVersion": "0.1.0",
+  "GameVersion": "502094",
+  "FriendlyName": "Factory Production Stats",
+  "Description": "Production statistics for items, fluids and power. Development source; gameplay features are not implemented yet.",
+  "Category": "Modding",
+  "CreatedBy": "guopeng1994",
+  "CreatedByURL": "https://github.com/guopeng1994",
+  "DocsURL": "https://github.com/guopeng1994/satisfactory-factory-production-stats",
+  "CanContainContent": true,
+  "IsBetaVersion": true,
+  "IsExperimentalVersion": false,
+  "Installed": false,
+  "BuiltInInitialFeatureState": "Active",
+  "Modules": [
+    {
+      "Name": "FactoryProductionStats",
+      "Type": "Runtime",
+      "LoadingPhase": "Default"
+    }
+  ],
+  "Plugins": [
+    {
+      "Name": "SML",
+      "Enabled": true,
+      "SemVersion": "3.12.0"
+    }
+  ]
+}

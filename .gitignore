@@ -1,0 +1,48 @@
+# Local design references; redistribution has not been confirmed.
+/8wmcizzps8881.jpg
+/Electric_network_info.png
+/Fluids.png
+/items.png
+
+# Downloaded dependencies and local installs are not project source.
+/_dependencies/
+/Engine/
+/Plugins/Wwise/
+/Plugins/WwiseNiagara/
+*_WwiseProject/
+
+# Unreal generated files, at every plugin depth.
+**/Binaries/
+**/Intermediate/
+**/Saved/
+**/DerivedDataCache/
+*_BuiltData.uasset
+*.sln
+*.suo
+*.VC.db
+*.VC.opendb
+*.xcodeproj/
+*.xcworkspace/
+
+# Editor and code search state.
+.DS_Store
+.vs/
+.idea/
+.vscode/
+.codegraph/
+.serena/
+*.user
+*.userprefs
+
+# Personal saves, credentials, local mod settings and package outputs.
+*.sav
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+**/Metadata/Crypto.json
+/Configs/
+/dist/
+
+# Keep actual Source/, Config/, Resources/ and authored Content/*.uasset.
