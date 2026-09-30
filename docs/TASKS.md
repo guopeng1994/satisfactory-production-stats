@@ -211,7 +211,7 @@
 | 任务 | 当前状态 | 已有证据／阻塞 |
 | --- | --- | --- |
 | T00A | 资料验证通过 | ENVIRONMENT 已记录游戏1.2.4.0／502094、SML v3.12.0及精确SHA、UE／工具链要求和账号缺项；未构建 |
-| T00B | 源码准备完成，验收待Windows | 实际插件描述／Runtime／Build.cs、Git忽略与0BSD已准备；guopeng1994账号可用，仓库名已定；真实资产／编译／打包／加载待用户在Windows完成，尚未通过T00B验收 |
+| T00B | 源码准备完成，验收待Windows | 实际插件描述／Runtime／Build.cs、Git忽略与0BSD已准备；公开源码已推送到guopeng1994/satisfactory-production-stats，干净clone通过；真实资产／编译／打包／加载待用户在Windows完成，尚未通过T00B验收 |
 | T01 | 未开始 | 可先做静态调查；运行探针等待T00B |
 | T02 | 未开始 | 可草拟；冻结等待T01 |
 | T03 | 未开始 | 可在契约草案上检查纯算法，游戏集成待前置通过 |

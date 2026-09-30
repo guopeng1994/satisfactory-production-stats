@@ -4,7 +4,7 @@
 
 发布形态：标准 SML Mod，经 Alpakit 打包，支持通过 ficsit.app 的 Satisfactory Mod Manager（SMM）管理安装、启用、禁用、升级和卸载。
 
-源码托管：[guopeng1994/satisfactory-factory-production-stats](https://github.com/guopeng1994/satisfactory-factory-production-stats)，自有内容使用 [0BSD](LICENSE)，允许免费使用、复制、修改、分发和商用，不要求署名。游戏、引擎和其他第三方依赖按各自许可获取。
+源码托管：[guopeng1994/satisfactory-production-stats](https://github.com/guopeng1994/satisfactory-production-stats)，自有内容使用 [0BSD](LICENSE)，允许免费使用、复制、修改、分发和商用，不要求署名。游戏、引擎和其他第三方依赖按各自许可获取。
 
 已完成 T00A 环境资料基线和 T00B 插件源码准备：真实插件描述、C++ Runtime 启动／退出日志及构建规则已就绪。**尚无统计功能、真实 Game Feature／根世界资产或可安装游戏包**；配套工程、编译、打包和游戏验收由用户后续在 Windows 执行。更新日期：2026 年 9 月 30 日。
 

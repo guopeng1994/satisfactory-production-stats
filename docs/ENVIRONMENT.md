@@ -119,11 +119,11 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 | --- | --- |
 | 公开开源意图 | 用户已授权，无需再次确认意图 |
 | GitHub 账号／组织 | 用户指定 `guopeng1994`；GitHub 连接及现有 Git 凭据均核实为该账号 |
-| 仓库名 | 用户授权选名：`satisfactory-factory-production-stats` |
+| 仓库名 | 用户授权选名：`satisfactory-production-stats` |
 | 许可证 | 用户要求充分开放／免费授权，已选 **0BSD** 并创建真实 LICENSE；允许使用、修改、复制、分发、商用，不要求署名 |
 | GitHub 访问 | 现有 Git 凭据可用，gh 非必需；通过 GitHub REST 创建，Git 推送 |
 | Git 身份 | 本仓库使用账号名及 GitHub ID 对应的 noreply 地址，不修改全局身份 |
-| 公开仓库 URL | [guopeng1994/satisfactory-factory-production-stats](https://github.com/guopeng1994/satisfactory-factory-production-stats)，已通过 GitHub REST 创建（public、main）；推送及干净 clone 待本轮末尾补记 |
+| 公开仓库 URL | [guopeng1994/satisfactory-production-stats](https://github.com/guopeng1994/satisfactory-production-stats)，已通过 GitHub REST 创建并重命名（public、main），源码已推送；首轮干净 clone 通过 |
 
 本地已初始化 `main` 分支并写入 `.gitignore`。当前公开候选包含文档、忽略规则、LICENSE、插件描述、Build.cs 和实际 C++ Runtime 代码；四张参考图继续保留在原位置，按精确文件名忽略。后续还须提交必要的自有 `.uasset`、配置和资源，不能只上传 C++ 后宣称完整交付。
 
@@ -138,3 +138,5 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 **T00B：源码准备完成，验收待 Windows。** 已提供实际插件描述、C++ Runtime／构建规则及 Windows 资产接入说明；已落实仓库归属、名称、许可证和访问。用户后续提供配套机器并执行编译、打包和加载检查。当前尚无完整 Starter、私有引擎安装包、真实 Game Feature／根世界资产或构建／加载证据，因此 T00B 按原验收条件仍未通过。源码只含空插件的真实模块行为，没有伪造二进制资产或生产功能。
 
 本轮 Python 标准库静态检查通过：插件／模块名称、版本、必需 SML、目标 build、Core 构建依赖及实际启动／退出方法；12 个应忽略路径被排除，6 个源码／自有资产路径可追踪。首次 dry-run 发现本地 `.serena` 工具配置，已加入忽略规则并保留本地文件。最终公开候选为 10 个自有文件；这些检查不能替代 Unreal 编译或游戏运行。原始参考图完整保留。
+
+Git 交付验证：`git diff --cached --check` 无错误；初次源码提交 `8f4b7c00a3969a155c504147ff07fb3bbe785179` 已推送。实际 `git clone --depth 1` 到临时干净目录，`git ls-files` 返回全部 10 个候选文件，逐文件字节与本地一致；没有参考图／`.serena`，本地四张参考图仍在。随后按用户修正将仓库名改为 `satisfactory-production-stats`，同步描述和文档链接；没有创建发行 tag、GitHub Release 或上传 SMR。**干净 clone 仅验证源码交付，不是干净构建成功。**

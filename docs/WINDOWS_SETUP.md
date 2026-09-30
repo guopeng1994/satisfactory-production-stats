@@ -9,7 +9,7 @@
 在短英文路径 clone 本仓库和固定 Starter。例如两个仓库并列在同一个工作目录，在其父目录执行：
 
 ```powershell
-git clone https://github.com/guopeng1994/satisfactory-factory-production-stats.git FactoryProductionStatsRepo
+git clone https://github.com/guopeng1994/satisfactory-production-stats.git FactoryProductionStatsRepo
 git clone --branch v3.12.0 --depth 1 https://github.com/satisfactorymodding/SatisfactoryModLoader.git SatisfactoryStarter
 git -C SatisfactoryStarter rev-parse HEAD
 ```
