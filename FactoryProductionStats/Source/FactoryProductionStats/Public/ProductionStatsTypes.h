@@ -202,7 +202,7 @@ struct Bucket
 {
     TimeRange range; // Events: [begin,end); energy: last valid sample <= end.
     Coverage coverage;
-    std::optional<Aggregate> value; // No observation -> no numeric value.
+    std::optional<Aggregate> value; // Unknown is absent; known positive counts survive coverage gaps.
 };
 inline Error Validate(const SeriesId& series, const Bucket& bucket)
 {

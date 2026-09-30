@@ -16,7 +16,7 @@
 
 ## 2 数量候选接入点
 
-所有数量候选均需先确认权威世界、实际执行线程和不可逆成功操作。表中“数量来源待证实”意味着不能注册正式统计 hook，也不能默认数量为配方值。
+所有数量候选均需先确认权威世界、实际执行线程和不可逆成功操作。表中“数量来源待证实”意味着不能认定 hook 已通过正式采集验收，也不能默认数量为配方值；用户授权的候选适配仍须保留未验证覆盖标记。
 
 | 位置／签名 | 已证实边界 | 成功数量、线程和覆盖缺口 |
 | --- | --- | --- |
@@ -97,9 +97,9 @@ SML 提供 [ModSubsystem / SubsystemActorManager](https://github.com/satisfactor
 本轮最小源码：`Private/Diagnostics/FactoryStatsProbe.h/.cpp`，通过原生控制台命令 `fps.Probe` 创建临时 Actor，不需要探针 Blueprint：
 
 1. 命令在 Runtime 注册（含 Shipping，便于实际游戏验证），限定游戏线程、游戏世界、非客户端；Actor 再检查 HasAuthority。
-2. BeginPlay 注册一次工厂 handler；第一次 PreFactoryTick 输出建筑类路径计数，以及 Factory 附属的去重 Circuit 原始字段、储能存量／容量和 Group ID。没有库存差分、产量累加或生产 hook。
+2. BeginPlay 注册一次工厂 handler；第一次 PreFactoryTick 输出建筑类路径计数，并复用 T05 的原生 CircuitSubsystem 注册表读取层输出全部 power circuits：本地实时字段／GetStats副本、Group ID、采样时间、Stats最后更新时间、参与设备类及ActualConsumption／TargetConsumption、基础／动态／增益发电和每个BatteryInfo的有符号MW／MWh。探针不向历史写入，也不计算配方或库存差分。
 3. 不在 handler 遍历中移除自己；短 lifespan 延后销毁，EndPlay 配对移除 handler。没有 tick 到来时最长 10 秒寿命。模块卸载先注销命令，再销毁存活探针；世界退出走 Actor EndPlay。注册／移除请求日志包含探针对象路径，移除还记录是否已采样和退出原因；日志不能单独证明原生数组中已无残留 handler，仍需反复进出世界验证。
-4. 这是一次 O(建筑数) 诊断扫描，只在人工调用时发生，非逐帧采集。它不发现便携矿机、所有特殊消费者或全电网；日志明确标注不提供世界总量。
+4. 这是一次 O(建筑数＋原生电路参与者数) 诊断，只在人工调用时输出详细字段，常规 Capture 默认不记录这些日志。诊断在受控小世界运行。类census不含便携矿机；电力发现已扩展到原生全电路注册表，但该注册表的特殊负载覆盖及字段是否group副本仍待实测，不提供已验证世界总量。
 
 控制台注册使用 [Unreal IConsoleManager](https://dev.epicgames.com/documentation/unreal-engine/API/Runtime/Core/IConsoleManager/RegisterConsoleCommand?application_version=5.6) 的原生 world delegate。本机未取得定制引擎头文件、未执行 UHT／UE 编译；以上为源码行为，**不是运行验收结果**。Windows 以实际游戏中的插件构建验证，记录控制台启用方法；Editor 的生成桩读数不能替代发行游戏结果。
 
@@ -170,3 +170,9 @@ cl /nologo /std:c++20 /EHsc /W4 /I FactoryProductionStats\Source\FactoryProducti
 ## 本轮 T03～T05 接续
 
 用户授权延期 UE 构建／实机验证后，T03 核心、T04 成功通知作用域、T05 注册表快照及世界子系统已编码。静态声明和可运行数学检查分别记录在 [IMPLEMENTATION.md](IMPLEMENTATION.md)，上述 T01 待验矩阵继续有效。正的已知数量可以在零覆盖桶内保留，此时速率未知；这避免交接失败丢弃已经收到的成功事实。储能末值可带更早的有效时点，并在查询当前端点时采用新快照；不会把 MW 积分误作储能。
+
+### T01／T02 当前源码复核（c9c381f 之后）
+
+本轮发现旧 fps.Probe 仅从 Factory.GetPowerInfo 发现电路，无法为 T01 的特殊负载及电路／组字段语义提供足够诊断，因此已将其接到同一 FProductionStatsPowerReader。Windows 运行一次 fps.Probe 后，对照同group不同circuit的local／stats值及逐设备／电池条目；再切换开关、等待原生Stats更新后重复。9位有效数字保留原生float可往返精度；这只是日志格式，不是允许的统计误差。运行日志尚未取得，不能据源码宣称已确认字段范围。
+
+重新核对当前仓库和PATH：工作区基线为 c9c381f；仍无 UnrealEditor、UnrealEditor-Cmd、cl 或 wine 可执行项。用户继续延期 UE 构建与实机验证。T02 的已知正数量／零覆盖注释已与实际验证规则一致；原生误差容限、成功边界、线程和资源覆盖仍未知，因此保持 draft schema=0，不冻结。

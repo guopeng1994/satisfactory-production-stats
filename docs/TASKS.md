@@ -212,7 +212,7 @@
 | --- | --- | --- |
 | T00A | 资料验证通过 | ENVIRONMENT 已记录游戏1.2.4.0／502094、SML v3.12.0及精确SHA、UE／工具链要求和账号缺项；未构建 |
 | T00B | 源码准备完成，验收待Windows | 实际插件描述／Runtime／Build.cs、Git忽略与0BSD已准备；公开源码已推送到guopeng1994/satisfactory-production-stats，干净clone通过；真实资产／编译／打包／加载待用户在Windows完成，尚未通过T00B验收 |
-| T01 | 静态调查完成，探针源码待Windows验证 | API_EVIDENCE与113个固定来源指纹、生产覆盖矩阵、线程／网络缺口及fps.Probe一次性诊断源码已交付；未执行UE编译、真实成功数量探针或游戏对照，未通过T01完整验收 |
+| T01 | 静态调查完成，探针源码待Windows验证 | API_EVIDENCE与113个基线指纹＋1个SML实现指纹、生产覆盖矩阵、线程／网络缺口及fps.Probe全电路／设备原始字段诊断源码已交付；未执行UE编译、真实成功数量探针或游戏对照，未通过T01完整验收 |
 | T02 | 契约草案与本机检查通过，未冻结 | ProductionStatsTypes.h定义数量／功率／能量、覆盖、查询和保存DTO；实际C++检查＋ASan／UBSan通过；未UE编译，冻结等待T01实测 |
 | T03 | 核心实现及 Mac 算法检查通过，游戏集成待验证 | 五级有界桶、九窗口、All、覆盖／缺口、DTO校验恢复；超过1000h、守恒、端点、500序列容量检查通过；见 IMPLEMENTATION |
 | T04 | 采集适配源码已实现，UE／真实数量验收待Windows | 成功库存通知受生产作用域过滤；Sink／SimpleProducer候选；权威世界注册／注销、线程安全有界交接；成功边界和完整机器覆盖仍待T01，completeSources=false |

@@ -79,7 +79,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 
 本轮新增 `fps.Probe` 原生诊断命令（含 Shipping Runtime）。在 T00B 通过后进入备份单人测试存档，打开开发者控制台并运行命令；按 [SML Commands](https://docs.ficsit.app/satisfactory-modding/latest/SMLChatCommands.html) 的当前说明确认控制台开启方式。不要把聊天里的 `/` 命令当成 Unreal 控制台命令。
 
-下一次安全工厂 tick 应输出 `LogFactoryStatsProbe` 的建筑类计数、Circuit／Group ID 和原始电力字段。它只发现 Factory 附属电路，不给世界总量或成功产量；Editor 生成桩读数也不能作为游戏验收。该命令的 UE 编译与运行尚未通过。
+下一次安全工厂 tick 应输出 `LogFactoryStatsProbe` 的建筑类计数，以及 `LogProductionStatsPowerEvidence` 的全电路注册表原始数据：Circuit／Group ID、local与Stats字段、采样／更新时间、PowerInfo所属类与实际／请求功耗、基础／动态／增益发电及单个BatteryInfo的MW／MWh。它不提供已验证世界总量或成功产量；Editor生成桩读数不能作为游戏验收。该命令的UE编译与运行尚未通过。
 
 完整的受控场景、证据缺口、父子覆盖、精度及契约冻结条件见 [API_EVIDENCE.md](API_EVIDENCE.md)。T02 纯 C++ 检查的 Mac／MSVC 命令也在该文件；Mac 检查通过只证明公共契约边界，不证明 Unreal API／采集功能。
 

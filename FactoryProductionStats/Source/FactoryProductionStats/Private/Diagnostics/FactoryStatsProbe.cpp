@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: 0BSD
 #include "FactoryStatsProbe.h"
-#include "Buildables/FGBuildableFactory.h"
-#include "FGPowerCircuit.h"
-#include "FGPowerInfoComponent.h"
+#include "Buildables/FGBuildable.h"
+#include "ProductionStatsPowerReader.h"
+#include "Engine/World.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogFactoryStatsProbe, Log, All);
 
@@ -45,30 +45,17 @@ void AFactoryStatsProbe::PreFactoryTick(AFGBuildableSubsystem* Subsystem, float 
         return;
     Captured = true;
     TMap<FString, int32> ClassCounts;
-    TSet<UFGPowerCircuit*> Circuits;
     for (auto* Buildable : Subsystem->GetAllBuildablesRef())
     {
         if (!IsValid(Buildable)) continue;
         ++ClassCounts.FindOrAdd(Buildable->GetClass()->GetPathName());
-        auto* Factory = Cast<AFGBuildableFactory>(Buildable);
-        auto* Info = Factory ? Factory->GetPowerInfo() : nullptr;
-        auto* Circuit = IsValid(Info) ? Info->GetPowerCircuit() : nullptr;
-        if (IsValid(Circuit)) Circuits.Add(Circuit);
     }
-    UE_LOG(LogFactoryStatsProbe, Display, TEXT("T01 diagnostic gameThread=1 authority=1 dt=%g classes=%d discoveredCircuits=%d (factory-attached only; no world total)"),
-        DeltaTime, ClassCounts.Num(), Circuits.Num());
+    UE_LOG(LogFactoryStatsProbe, Display, TEXT("T01 diagnostic gameThread=1 authority=1 dt=%g classes=%d; native registry circuit evidence follows (no verified world total)"),
+        DeltaTime, ClassCounts.Num());
     for (const auto& Entry : ClassCounts)
         UE_LOG(LogFactoryStatsProbe, Display, TEXT("class=%s count=%d"), *Entry.Key, Entry.Value);
-    for (auto* Circuit : Circuits)
-    {
-        FPowerCircuitStats Stats;
-        Circuit->GetStats(Stats);
-        UE_LOG(LogFactoryStatsProbe, Display, TEXT("circuit=%d group=%d fuse=%d consumed=%g produced=%g capacity=%g demand=%g batteryNet=%g batteryStore=%g batteryStoreCapacity=%g boost=%g (raw native values)"),
-            Circuit->GetCircuitID(), Circuit->GetCircuitGroupID(), Circuit->IsFuseTriggered(),
-            Stats.PowerConsumed, Stats.PowerProduced, Stats.PowerProductionCapacity,
-            Stats.MaximumPowerConsumption, Stats.BatteryPowerInput,
-            Circuit->GetBatterySumPowerStore(), Circuit->GetBatterySumPowerStoreCapacity(), Stats.BoostProduced);
-    }
+    // Diagnostic uses native world time; it does not advance or write save-local History.
+    FProductionStatsPowerReader::Capture(GetWorld(), GetWorld()->GetTimeSeconds(), true);
     // Remove outside the handler iteration, never mutate its array mid-dispatch.
     SetLifeSpan(0.1f);
 }

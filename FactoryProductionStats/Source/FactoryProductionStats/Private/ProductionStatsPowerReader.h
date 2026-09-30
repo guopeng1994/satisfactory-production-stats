@@ -5,5 +5,6 @@ class UWorld;
 class FProductionStatsPowerReader
 {
 public:
-    static FactoryProductionStats::PowerSnapshot Capture(UWorld* World, double Time);
+    // Raw evidence is opt-in for the one-shot T01 probe, never regular collection.
+    static FactoryProductionStats::PowerSnapshot Capture(UWorld* World, double Time, bool LogEvidence = false);
 };
