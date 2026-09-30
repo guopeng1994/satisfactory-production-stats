@@ -1,6 +1,6 @@
 # T00B Windows 接续步骤
 
-状态：**源码准备完成，未编译／未运行。** 版本及依赖取得方式见 [ENVIRONMENT](ENVIRONMENT.md)。本页仅完成空插件的构建与加载门槛，不代表已有统计功能。
+状态：**源码准备完成，未编译／未运行。** 版本及依赖取得方式见 [ENVIRONMENT](ENVIRONMENT.md)。本页说明工程和加载门槛。T03～T05 源码已补齐，实际算法在 Mac 检查通过；UE／游戏部分仍未构建或运行，见 IMPLEMENTATION。
 
 ## 1 准备配套工程
 
@@ -20,7 +20,7 @@ Starter SHA 必须为 `1a7d2ca3a4281cf589bd842a814fd7a55eac4a99`。按官方流�
 
 先打开 Starter Editor，Alpakit Dev → Create Mod → **C++ & Blueprint**，Mod Reference 输入 **FactoryProductionStats**。由当前模板生成 Game Feature 资产。确认路径为 `Mods/GameFeatures/FactoryProductionStats`，资产类为 `FGGameFeatureData`，名称为 `FactoryProductionStats`，初始状态 Active。
 
-在该插件 Content 下创建 Blueprint，父类为 SML 的 `GameWorldModule`，命名 `RootGameWorld_FactoryProductionStats`，Class Defaults 中勾选 **Root Module**。保存并编译蓝图；同类型只保留一个 root。当前 root 没有生产逻辑，不添加假统计数据。
+在该插件 Content 下创建 Blueprint，父类为 SML 的 `GameWorldModule`，命名 `RootGameWorld_FactoryProductionStats`，Class Defaults 中勾选 **Root Module**。保存并编译蓝图；同类型只保留一个 root。采集由 native Runtime 的世界初始化通知调用 SML `RegisterSubsystemActor` 注册 `AProductionStatsSubsystem`；不要再在 root 的 Mod Subsystems 列表中注册另一份 Blueprint 子系统。root 保留模板所需生命周期，不添加假数据。
 
 关闭 Editor，在两个仓库父目录执行：
 
@@ -40,7 +40,7 @@ New-Item -ItemType Junction -Path $T00Generated -Target $T00Plugin
 
 这将 Editor 生成的真实资产复制回源码仓库，在 Starter 之外保留完整模板备份，再把 Starter 的标准插件路径连接到仓库插件目录。只执行一次；已有目录／备份时先检查，不强行覆盖。工程内不能保留两个同 Reference 的 uplugin。
 
-本仓库自有 Runtime 代码负责输出启动和退出日志；没有使用 FactoryGame／SML 类型，因此 Build.cs 仅依赖 Core。后续任务使用这些类型时按配套模板补上直接／传递依赖。SML 的必需版本依赖已在 uplugin 中声明，使用当前 Alpakit 检查元数据。插件描述中 GameVersion 精确限定 502094，这是待验证目标，不能称为已经通过的兼容承诺。
+当前 Runtime 使用 SML 世界子系统、FactoryGame 采集声明以及 Engine；Build.cs 公共依赖为 Core／CoreUObject／Engine／FactoryGame／SML，C++20。`Config/AccessTransformers.ini` 声明友元访问，不编辑上游头文件；第一次接入或修改这些规则后必须重新运行 UHT 并构建，核查 unused transformer 错误。SML 的必需版本依赖已在 uplugin 中声明，使用当前 Alpakit 检查元数据。插件描述中 GameVersion 精确限定 502094，这是待验证目标，不能称为已经通过的兼容承诺。
 
 ## 3 构建、打包、运行
 
@@ -82,3 +82,21 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 下一次安全工厂 tick 应输出 `LogFactoryStatsProbe` 的建筑类计数、Circuit／Group ID 和原始电力字段。它只发现 Factory 附属电路，不给世界总量或成功产量；Editor 生成桩读数也不能作为游戏验收。该命令的 UE 编译与运行尚未通过。
 
 完整的受控场景、证据缺口、父子覆盖、精度及契约冻结条件见 [API_EVIDENCE.md](API_EVIDENCE.md)。T02 纯 C++ 检查的 Mac／MSVC 命令也在该文件；Mac 检查通过只证明公共契约边界，不证明 Unreal API／采集功能。
+
+## 6 T03～T05 Windows 验证接续
+
+运行时应出现一次 `T03-T05 source integration active` 日志；退出再进入产生新的世界历史。Editor 下 native hooks 按 SML 机制停用，子系统也不采集，不能用 Editor 桩返回值证明游戏统计。当前没有 P 窗口；在游戏控制台执行 `fps.Stats` 可将 All 数量及当前 power 快照写入日志，含单位、时点和 provisional 覆盖。同一 History 不依赖 UI；也可用 C++ 调试器读取 Query／CurrentPower／RecordingTime。完整待验表见 [IMPLEMENTATION.md](IMPLEMENTATION.md)。
+
+在 VS 的 x64 Native Tools Command Prompt 中，从仓库根目录执行独立数学检查（不替代 UHT／游戏检查）：
+
+```bat
+set FPS_SRC=FactoryProductionStats\Source\FactoryProductionStats
+cl /nologo /std:c++20 /EHsc /W4 /I %FPS_SRC%\Public checks\ProductionStatsTypesCheck.cpp /Fe:%TEMP%\fps-types.exe /Fo:%TEMP%\fps-types.obj
+%TEMP%\fps-types.exe
+cl /nologo /std:c++20 /EHsc /W4 /I %FPS_SRC%\Public %FPS_SRC%\Private\ProductionStatsHistory.cpp checks\ProductionStatsHistoryCheck.cpp /Fe:%TEMP%\fps-history.exe /Fo:%TEMP%\
+%TEMP%\fps-history.exe
+cl /nologo /std:c++20 /EHsc /W4 /I %FPS_SRC%\Public %FPS_SRC%\Private\ProductionStatsHistory.cpp %FPS_SRC%\Private\ProductionStatsCollectors.cpp checks\ProductionStatsCollectorsCheck.cpp /Fe:%TEMP%\fps-collectors.exe /Fo:%TEMP%\
+%TEMP%\fps-collectors.exe
+```
+
+逐条检查退出码；不定义 NDEBUG。MSVC 命令当前未运行。实际游戏保存／读档历史恢复在 T08 接入前不会生效，不能因 DTO 往返通过就宣称随档保存完成。

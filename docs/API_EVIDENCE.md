@@ -10,9 +10,9 @@
 
 来源根目录：[固定工程提交](https://github.com/satisfactorymodding/SatisfactoryModLoader/tree/1a7d2ca3a4281cf589bd842a814fd7a55eac4a99)。以下链接指向原始声明，证明签名、注释和可见访问级别；不证明发行游戏二进制的完整实现。
 
-[Manufacturer.cpp](https://github.com/satisfactorymodding/SatisfactoryModLoader/blob/1a7d2ca3a4281cf589bd842a814fd7a55eac4a99/Source/FactoryGame/Private/Buildables/FGBuildableManufacturer.cpp) 明确是 Unreal Header Implementation 工具生成的文件，多数函数是空体／默认返回。少量补充实现不能使整个文件变成实际游戏实现。因而未证实生产调用链、成功数量、父子 `Super` 调用关系、delegate 分发线程及 Blueprint 覆盖。只有这些证据加上 Windows 受控操作，才允许 T04 接入。
+[Manufacturer.cpp](https://github.com/satisfactorymodding/SatisfactoryModLoader/blob/1a7d2ca3a4281cf589bd842a814fd7a55eac4a99/Source/FactoryGame/Private/Buildables/FGBuildableManufacturer.cpp) 明确是 Unreal Header Implementation 工具生成的文件，多数函数是空体／默认返回。少量补充实现不能使整个文件变成实际游戏实现。因而未证实生产调用链、成功数量、父子 `Super` 调用关系、delegate 分发线程及 Blueprint 覆盖。用户已授权在实机验证前完成 T04／T05 源码适配；这些证据加上 Windows 受控操作仍是正式验收条件。
 
-检索遵循 ponytail full。codegraph 已在当前会话报只读数据库错误，未重建索引；后续使用 rtk 搜索固定版本资料。本地标准 C++ 检查使用实际共享头文件，没有第二份 Python 统计算法。
+检索遵循 ponytail full。T01 初期 codegraph 报只读数据库错误，当时使用 rtk。随后用户明确授权初始化，本地 `.codegraph/` 已建立并增量同步；本轮自有代码优先用 codegraph，未索引的固定版本资料用 rtk。本地标准 C++ 检查使用实际共享头文件，没有第二份 Python 统计算法。
 
 ## 2 数量候选接入点
 
@@ -121,13 +121,13 @@ SML 提供 [ModSubsystem / SubsystemActorManager](https://github.com/satisfactor
 
 ## 7 T02 公共契约映射
 
-实际定义在 [ProductionStatsTypes.h](../FactoryProductionStats/Source/FactoryProductionStats/Public/ProductionStatsTypes.h)，全部为同一标准 C++20 类型，不依赖 UE，供 T03 使用同一实现。负责游戏转换、世界线程和保存的适配层留给后续任务。没有网络代码／跨世界全局状态。
+实际定义在 [ProductionStatsTypes.h](../FactoryProductionStats/Source/FactoryProductionStats/Public/ProductionStatsTypes.h)，全部为同一标准 C++20 类型，不依赖 UE，供 T03 使用同一实现。T03～T05 已复用这些类型实现游戏转换、世界线程交接及查询；T08 保存生命周期仍未接入。没有联网代码；临时 hook 注册表按世界 Inbox 分离，不跨世界合并历史。
 
 | 需求 | 类型／规则 |
 | --- | --- |
 | 序列 ID | SeriesId = Category + Metric + Direction + Scope + key。物品／流体 key 为描述类完整路径；BuildingType 为建筑完整类路径；World／Unclassified 电力 key 为空。资源路径是稳定查找键，不是已加载 UObject 保证 |
 | 精度／单位 | Quantity 为 int64 件数或 double m³；类别与 variant 必须相符。PowerReading 明确指标，通过 UnitFor 区分 MW／MWh；禁止 NaN、∞、物理负值；仅 Unclassified 的 MW 差额可为负 |
-| 成功数量输入 | QuantityEvent 只接收正的成功量、仿真时间和 source 类路径。zero 是已观测无事件的桶，不发送零事件。游戏 raw → canonical 转换未接入，不能将原生数量直接构造流体 double 后自称 m³ |
+| 成功数量输入 | QuantityEvent 只接收正的成功量、仿真时间和 source 类路径。zero 是已观测无事件的桶，不发送零事件。T04 在游戏线程缓存描述类 Form 与原生 GetAmountConvertedByForm(1,Form) 返回的单位量，worker只用复制数据换算；转换精度待实测 |
 | 权威边界 | WriteContext + activeEpoch 允许当前权威世界写入；主菜单／客户端／旧世界拒绝。context 由游戏拥有者生成，不信任外部 bool；T04 必须在实际写入处调用检查。epoch 不保存 |
 | 电力快照 | PowerSnapshot 按同一时点包含各 PowerReading、当前网络／跳闸数。optional 空值是未知，0 是已知；同一快照不可重复 SeriesId。设备数是当前覆盖设备数，不是历史平均 |
 | 覆盖／缺口 | CoverageGap 表达类别、缺失来源、半开时间范围和原因。Bucket 保存 union observedSeconds、completeSources、原因掩码；停机也计观测时间，新资源首次出现前已覆盖部分为零，不从首次事件缩短分母 |
@@ -135,13 +135,13 @@ SML 提供 [ModSubsystem / SubsystemActorManager](https://github.com/satisfactor
 | 时间／边界 | 非负有限 save-local 仿真秒；事件 `[begin,end)`，恰在 end 的事件归下一桶。能量末值时点允许等于 end。事件乱序由 T03 返回 OutOfOrder，不能悄悄夹到 now；pause／offline 不推进 clock |
 | 查询／结果 | Query 一套服务三类别，九窗口、默认 1m、maxPoints≤600。QueryResult 带 requestedRange、actualRange、resolution、approximateBoundary；SeriesResult 带展示资源、单位、summary 和 points；未知资源仍保留稳定 ID 和数量 |
 | 错误 | InvalidSeries／Time／Value、UnitMismatch、Overflow、OutOfOrder、NoCoverage、UnsupportedSchema。无覆盖不返回虚假的均值；非法输入拒绝并标缺口，不影响游戏实际生产 |
-| 保存 | SaveData 含 draft schema、记录起点／时钟、SavedSeries lifetime、分层桶和 All 趋势。DraftSchemaVersion=0 是未发行 DTO；CheckSchema 不接受其他版本，T08 不能覆盖未知未来格式。不是 UE SaveGame 实现 |
+| 保存 | SaveData 含 draft schema、记录起点／时钟、两类覆盖历史、SavedSeries 的 lifetime／分层桶／All／待归桶数量和最新功率状态。DraftSchemaVersion=0 是未发行 DTO；CheckSchema 不接受其他版本，T08 不能覆盖未知未来格式。不是 UE SaveGame 实现 |
 
 草案数值辅助只处理契约边界：CheckedAddItems 保持溢出时原值；RatePerMinute、AverageMegawatts 无有效时间时返回 nullopt。大整数累计保持 int64，到最终显示速率时才转浮点，速率不承诺超过 double 整数精度后的逐件分辨率。
 
 缺口降采样约定：部分桶保留观测秒和原因，不把未知部分按零摊入分母；UI 对部分／未知桶断线或明确标注该桶不完整。粗桶已经失去精确缺口位置时，不宣称知道缺口在桶内哪个位置。source 缺失与时间缺失分开：有观测但部分机器未覆盖时，数值是已覆盖来源的小计，completeSources=false，不能标全世界精确总量。
 
-T03 要在一个历史实现里落实已要求的有界层级／All 以及区间覆盖；DTO 的 vector 并不自动有界。候选为 1s/10m、10s/1h、1m/10h、10m/50h、1h/1000h，All trend≤512，查询每序列≤600；最终内存预算和长度校验由 T03／T08实现。本轮没有历史分桶、序列化、UI 或真实数据注入。
+T03 已在一个历史实现里落实已要求的有界层级／All 以及区间覆盖；DTO 的 vector 并不自动有界。候选为 1s/10m、10s/1h、1m/10h、10m/50h、1h/1000h，All trend≤512，查询每序列≤600；T03已测算运行内存并实现长度校验；实际编码存档体积在T08／T09测量。T03 已实现有界分桶和校验后的 DTO 往返，见 IMPLEMENTATION；UE 存档编码／生命周期及 UI 仍属后续任务。
 
 查询不足：now=20、选择 1m 时保留请求窗口长度为 60 秒，save-local requestedRange 从 0 起，actualRange 是已记录的 20 秒；显示“已采集20秒／请求1分钟”，按20秒求速率。All 使用 recordingStart，不代指1000h。粗边界必须返回实际对齐范围并标 approximateBoundary，禁止偷偷分摊整数累计。空世界尚无有效区间时 NoCoverage；不将零宽区间作为有效桶。
 
@@ -166,3 +166,7 @@ cl /nologo /std:c++20 /EHsc /W4 /I FactoryProductionStats\Source\FactoryProducti
 ```
 
 未运行：MSVC、UHT／Unreal 编译、fps.Probe、任何游戏计数、电力 UI 对照、世界销毁、资产加载、Alpakit。T02 草案可供 T03 独立核心算法开始；T01 实机成功语义、误差和网络边界确认后再冻结。
+
+## 本轮 T03～T05 接续
+
+用户授权延期 UE 构建／实机验证后，T03 核心、T04 成功通知作用域、T05 注册表快照及世界子系统已编码。静态声明和可运行数学检查分别记录在 [IMPLEMENTATION.md](IMPLEMENTATION.md)，上述 T01 待验矩阵继续有效。正的已知数量可以在零覆盖桶内保留，此时速率未知；这避免交接失败丢弃已经收到的成功事实。储能末值可带更早的有效时点，并在查询当前端点时采用新快照；不会把 MW 积分误作储能。

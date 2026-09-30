@@ -5,7 +5,7 @@
   "SemVersion": "0.1.0",
   "GameVersion": "502094",
   "FriendlyName": "Factory Production Stats",
-  "Description": "Production statistics for items, fluids and power. Development source; gameplay features are not implemented yet.",
+  "Description": "Production statistics for items, fluids and power. Development source: collection and history await game validation; UI and save integration are pending.",
   "Category": "Modding",
   "CreatedBy": "guopeng1994",
   "CreatedByURL": "https://github.com/guopeng1994",

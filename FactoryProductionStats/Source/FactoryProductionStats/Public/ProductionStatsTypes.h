@@ -27,7 +27,7 @@ enum class Unit { Items, CubicMetres, Megawatts, MegawattHours };
 enum class Error
 {
     None, InvalidSeries, InvalidTime, InvalidValue, UnitMismatch,
-    Overflow, OutOfOrder, NoCoverage, UnsupportedSchema
+    Overflow, OutOfOrder, NoCoverage, UnsupportedSchema, NotAuthoritative, CapacityExceeded
 };
 enum class GapReason : std::uint32_t
 {
@@ -138,6 +138,7 @@ struct PowerReading
     SeriesId series;
     std::optional<double> value;
     std::optional<std::uint32_t> coveredDeviceCount; // Current count, not a mean.
+    bool completeSources = false;
 };
 inline Error Validate(const PowerReading& reading)
 {
@@ -212,7 +213,15 @@ inline Error Validate(const SeriesId& series, const Bucket& bucket)
         coverage.observedSeconds > bucket.range.end - bucket.range.begin ||
         coverage.gapReasons > 31) return Error::InvalidValue;
     if (coverage.observedSeconds == 0)
-        return bucket.value ? Error::InvalidValue : Error::None;
+    {
+        if (!bucket.value) return Error::None;
+        // Successful events remain known even if an interval's coverage failed.
+        // Its rate is still unknown; never manufacture an observed zero.
+        if (series.category == Category::Power) return Error::InvalidValue;
+        const auto* quantity = std::get_if<Quantity>(&*bucket.value);
+        return quantity && ValidateQuantity(series, *quantity) == Error::None &&
+            std::visit([](auto count) { return count > 0; }, *quantity) ? Error::None : Error::InvalidValue;
+    }
     if (!bucket.value) return Error::InvalidValue;
     if (series.category != Category::Power)
     {
@@ -224,7 +233,7 @@ inline Error Validate(const SeriesId& series, const Bucket& bucket)
         const auto* state = std::get_if<EnergyState>(&*bucket.value);
         if (!state) return Error::UnitMismatch;
         return std::isfinite(state->megawattHours) && state->megawattHours >= 0 &&
-            IsTime(state->time) && state->time >= bucket.range.begin &&
+            IsTime(state->time) &&
             state->time <= bucket.range.end ? Error::None : Error::InvalidValue;
     }
     const auto* integral = std::get_if<PowerIntegral>(&*bucket.value);
@@ -320,12 +329,28 @@ struct QueryResult
 // claim is implied. Draft 0 is not a released serialization format.
 inline constexpr std::uint32_t DraftSchemaVersion = 0;
 struct HistoryLevel { double resolutionSeconds = 0; std::vector<Bucket> buckets; };
-struct SavedSeries
+struct SavedHistory
 {
-    SeriesId series;
     Bucket lifetime;
     std::vector<HistoryLevel> levels; // T03 caps every level; never raw event history.
     std::vector<Bucket> allTrend; // T03 bounded merge, candidate limit 512.
+};
+struct SavedSeries
+{
+    SeriesId series;
+    SavedHistory history;
+    Quantity pending = std::int64_t{0}; // Events at clock belong to the next interval.
+    std::optional<double> latestPower;
+    double latestPowerTime = 0;
+    bool completeSources = false;
+};
+struct SavedCategoryCoverage
+{
+    Category category = Category::Items;
+    SavedHistory history;
+    bool observed = false;
+    bool completeSources = false;
+    std::uint32_t gapReasons = 0;
 };
 struct SaveData
 {
@@ -333,6 +358,7 @@ struct SaveData
     double recordingStart = 0;
     double clock = 0;
     std::vector<SavedSeries> series;
+    std::vector<SavedCategoryCoverage> quantityCoverage;
 };
 inline Error CheckSchema(std::uint32_t schema)
 {

@@ -110,7 +110,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Shipping 构建失败' }
 - `git ls-remote https://github.com/satisfactorymodding/SatisfactoryModLoader.git refs/tags/v3.12.0`：返回本表精确 SHA。
 - Python 标准库 urllib 读取 GitHub latest API：SML v3.12.0、SMM v3.1.0 均为非 draft、非 prerelease；读取固定提交的 uproject、模板、uplugin 和 Target.cs，与本表一致。
 - 未认证读取 `https://api.github.com/repos/satisfactorymodding/UnrealEngine/releases/latest`：HTTP 404，私有资源访问待落实。
-- codegraph 两次返回 `attempt to write a readonly database`；已停止本任务的 codegraph 调用，改用 rtk，没有初始化／重建索引。
+- T01 初期 codegraph 两次返回 `attempt to write a readonly database`，当时用 rtk；随后用户明确授权初始化，本地 `codegraph init --yes /Users/dev/projects/Mods` 和增量 sync 已成功。索引仅保留本地且被 Git 忽略；后续优先用 codegraph。
 - `git init -b main`、`git check-ignore`、`git diff --check` 和 `git add --dry-run`：结果见本节交付记录。没有执行 UE 编译、Alpakit 或游戏命令，因此没有这些成功日志。
 
 ## 5 GitHub 与公开内容边界
